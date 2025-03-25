@@ -57,10 +57,9 @@ jobs:
           for (const run of sarif.runs || []) {
             const rules = run.tool?.driver?.rules || [];
             for (const rule of rules) {
-              const props = rule.properties || {};
-              const sev = props.securitySeverity;
+              rule.properties = rule.properties || {};
+              const sev = rule.properties.securitySeverity;
               if (typeof sev !== 'number') {
-                rule.properties = props;
                 rule.properties.securitySeverity = 3.0;
                 fixed = true;
               }
@@ -68,10 +67,9 @@ jobs:
 
             const results = run.results || [];
             for (const result of results) {
-              const props = result.properties || {};
-              const sev = props.securitySeverity;
+              result.properties = result.properties || {};
+              const sev = result.properties.securitySeverity;
               if (typeof sev !== 'number') {
-                result.properties = props;
                 result.properties.securitySeverity = 3.0;
                 fixed = true;
               }

@@ -46,41 +46,45 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         continue-on-error: true
 
-      - name: Sanitize SARIF (rules & results)
+        - name: Sanitize SARIF (fix missing or invalid severity values)
         run: |
           node -e "
           const fs = require('fs');
           const path = 'snyk.sarif';
           const sarif = JSON.parse(fs.readFileSync(path, 'utf8'));
           let fixed = false;
-
+      
           for (const run of sarif.runs || []) {
             const rules = run.tool?.driver?.rules || [];
             for (const rule of rules) {
-              if (typeof rule?.properties?.securitySeverity !== 'number') {
-                if (!rule.properties) rule.properties = {};
+              const props = rule.properties || {};
+              const sev = props.securitySeverity;
+              if (typeof sev !== 'number') {
+                rule.properties = props;
                 rule.properties.securitySeverity = 3.0;
                 fixed = true;
               }
             }
-
+      
             const results = run.results || [];
             for (const result of results) {
-              if (typeof result?.properties?.securitySeverity !== 'number') {
-                if (!result.properties) result.properties = {};
+              const props = result.properties || {};
+              const sev = props.securitySeverity;
+              if (typeof sev !== 'number') {
+                result.properties = props;
                 result.properties.securitySeverity = 3.0;
                 fixed = true;
               }
             }
           }
-
+      
           if (fixed) {
             fs.writeFileSync(path, JSON.stringify(sarif, null, 2));
             console.log('✅ SARIF sanitized and saved.');
           } else {
             console.log('✅ SARIF already clean.');
           }
-          "
+          "      
 
       - name: Upload SARIF to GitHub Code Scanning
         if: always()

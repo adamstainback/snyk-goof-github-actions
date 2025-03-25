@@ -39,10 +39,10 @@ jobs:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
     - name: Generate SARIF report
+      continue-on-error: true
       run: snyk test --sarif-file-output=snyk.sarif --all-projects --detection-depth=2 --exclude=node_modules
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        continue-on-error: true
 
     - name: Upload SARIF to GitHub Code Scanning
       uses: github/codeql-action/upload-sarif@v2

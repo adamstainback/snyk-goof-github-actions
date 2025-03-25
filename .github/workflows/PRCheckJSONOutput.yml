@@ -1,14 +1,13 @@
-name: Snyk OSS Summary Scan
+name: Snyk OSS Scan with PR Comment
 
 on:
   pull_request:
-  push:
 
 env:
   SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
 jobs:
-  snyk-scan:
+  snyk-comment:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,10 +25,30 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-      - name: Output summary to GitHub Actions UI
-        run: |
-          echo "## Snyk Vulnerabilities Found" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          jq -r '.vulnerabilities[] | "- \(.severity) severity in \(.packageName)@\(.version): \(.title)"' snyk-results.json | head -n 10 >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "_Only showing top 10. See logs for full results._" >> $GITHUB_STEP_SUMMARY
+      - name: Create PR comment with Snyk summary
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const results = JSON.parse(fs.readFileSync('snyk-results.json', 'utf8'));
+            const vulns = results.vulnerabilities || [];
+
+            if (vulns.length === 0) {
+              commentBody = "✅ No Snyk vulnerabilities found!";
+            } else {
+              const summary = vulns
+                .slice(0, 10)
+                .map(v => `- **${v.severity.toUpperCase()}**: \`${v.packageName}@${v.version}\` - ${v.title}`)
+                .join('\n');
+              commentBody = `### 🔒 Snyk Vulnerability Summary\n\n${summary}\n\n_Only showing top 10._`;
+            }
+
+            const pr = context.payload.pull_request.number;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr,
+              body: commentBody
+            });

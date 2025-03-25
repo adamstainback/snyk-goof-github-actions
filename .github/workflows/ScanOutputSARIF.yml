@@ -12,42 +12,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 🧾 Checkout code
-      uses: actions/checkout@v3
+      - name: 🧾 Checkout code
+        uses: actions/checkout@v3
 
-    - name: 🧱 Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: 18
+      - name: 🧱 Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
 
-    - name: 📦 Install dependencies
-      run: |
-      npm install
-      npm install http-signature
+      - name: 📦 Install dependencies
+        run: |
+          npm install
+          npm install http-signature
 
-    - name: 🔧 Install Snyk CLI
-      uses: snyk/actions/setup@master
+      - name: 🔧 Install Snyk CLI
+        uses: snyk/actions/setup@master
 
-    - name: 🔍 Run Snyk test (don't break CI)
-      run: snyk test --all-projects --detection-depth=2 --exclude=node_modules
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      continue-on-error: true
+      - name: 🔍 Run Snyk test (don't break CI)
+        run: snyk test --all-projects --detection-depth=2 --exclude=node_modules
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        continue-on-error: true
 
-    - name: 📊 Run Snyk monitor (optional)
-      run: snyk monitor --all-projects --detection-depth=2 --exclude=node_modules
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      continue-on-error: true
+      - name: 📊 Run Snyk monitor (optional)
+        run: snyk monitor --all-projects --detection-depth=2 --exclude=node_modules
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        continue-on-error: true
 
-    - name: 🧨 Generate SARIF report
-      run: snyk test --sarif-file-output=snyk.sarif --all-projects --detection-depth=2 --exclude=node_modules --severity-threshold=low
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      continue-on-error: true
+      - name: 🧨 Generate SARIF report
+        run: snyk test --sarif-file-output=snyk.sarif --all-projects --detection-depth=2 --exclude=node_modules --severity-threshold=low
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        continue-on-error: true
 
-    - name: ☁️ Upload SARIF to GitHub Code Scanning
-      if: always()  # Ensures this runs even if SARIF gen step fails
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: snyk.sarif
+      - name: ☁️ Upload SARIF to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk.sarif

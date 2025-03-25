@@ -1,4 +1,4 @@
-name: Snyk Security Scan
+name: Snyk Full Security Scan
 
 on:
   push:
@@ -28,64 +28,58 @@ jobs:
       - name: Install Snyk CLI
         uses: snyk/actions/setup@master
 
-      - name: Run Snyk test (non-blocking)
-        run: snyk test --all-projects --detection-depth=2 --exclude=node_modules
+      - name: Snyk OSS scan (dependencies)
+        run: snyk test --sarif-file-output=snyk-oss.sarif --all-projects --detection-depth=2 --exclude=node_modules
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         continue-on-error: true
 
-      - name: Run Snyk monitor (optional)
-        run: snyk monitor --all-projects --detection-depth=2 --exclude=node_modules
+      - name: Snyk Code scan (static analysis)
+        run: snyk code test --sarif > snyk-code.sarif
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         continue-on-error: true
 
-      - name: Generate SARIF report
-        run: snyk test --sarif-file-output=snyk.sarif --all-projects --detection-depth=2 --exclude=node_modules --severity-threshold=low > snyk.sarif
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        continue-on-error: true
-
-      - name: Sanitize SARIF (fix missing or invalid severity values)
+      - name: Sanitize SARIF files (OSS + Code)
         run: |
-          node -e "
-          const fs = require('fs');
-          const path = 'snyk.sarif';
-          const sarif = JSON.parse(fs.readFileSync(path, 'utf8'));
-          let fixed = false;
+          for file in snyk-oss.sarif snyk-code.sarif; do
+            if [ -f "$file" ]; then
+              echo "Sanitizing $file"
+              node -e "
+              const fs = require('fs');
+              const path = '$file';
+              const sarif = JSON.parse(fs.readFileSync(path, 'utf8'));
+              let fixed = false;
 
-          for (const run of sarif.runs || []) {
-            const rules = run.tool?.driver?.rules || [];
-            for (const rule of rules) {
-              rule.properties = rule.properties || {};
-              const sev = rule.properties.securitySeverity;
-              if (typeof sev !== 'number') {
-                rule.properties.securitySeverity = 3.0;
-                fixed = true;
+              for (const run of sarif.runs || []) {
+                const rules = run.tool?.driver?.rules || [];
+                for (const rule of rules) {
+                  rule.properties = rule.properties || {};
+                  if (typeof rule.properties.securitySeverity !== 'number') {
+                    rule.properties.securitySeverity = 3.0;
+                    fixed = true;
+                  }
+                }
               }
-            }
 
-            const results = run.results || [];
-            for (const result of results) {
-              result.properties = result.properties || {};
-              const sev = result.properties.securitySeverity;
-              if (typeof sev !== 'number') {
-                result.properties.securitySeverity = 3.0;
-                fixed = true;
+              if (fixed) {
+                fs.writeFileSync(path, JSON.stringify(sarif, null, 2));
+                console.log('✅ $file sanitized and saved.');
+              } else {
+                console.log('✅ $file already clean.');
               }
-            }
-          }
+              "
+            fi
+          done
 
-          if (fixed) {
-            fs.writeFileSync(path, JSON.stringify(sarif, null, 2));
-            console.log('✅ SARIF sanitized and saved.');
-          } else {
-            console.log('✅ SARIF already clean.');
-          }
-          "
-
-      - name: Upload SARIF to GitHub Code Scanning
+      - name: Upload OSS SARIF to GitHub Code Scanning
         if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
-          sarif_file: snyk.sarif
+          sarif_file: snyk-oss.sarif
+
+      - name: Upload Code SARIF to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk-code.sarif

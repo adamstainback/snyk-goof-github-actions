@@ -1,0 +1,36 @@
+name: Snyk OSS Summary Scan
+
+on:
+  pull_request:
+  push:
+
+env:
+  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+jobs:
+  snyk-scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Snyk CLI
+        uses: snyk/actions/setup@master
+
+      - name: Run Snyk test and save JSON
+        run: snyk test --json > snyk-results.json
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        continue-on-error: true
+
+      - name: Output summary to GitHub Actions UI
+        run: |
+          echo "## Snyk Vulnerabilities Found" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat snyk-results.json | jq -r '.vulnerabilities[] | "- \(.severity) severity in \(.packageName)@\(.version): \(.title)"' | head -n 10 >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "_Only showing top 10. See logs for full results._" >> $GITHUB_STEP_SUMMARY

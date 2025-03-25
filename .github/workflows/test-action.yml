@@ -12,23 +12,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Set up Snyk CLI
-      uses: snyk/actions/setup@master
-
-    - name: Run Snyk test (without dependency install)
-      run: snyk test
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-
-    - name: Output SARIF (optional)
-      run: snyk test --sarif-file-output=snyk.sarif --all-projects --detection-depth=2 --exclude=node_modules
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-
-    - name: Upload SARIF to GitHub Code Scanning
-      uses: github/codeql-action/upload-sarif@v2
-      with:
-        sarif_file: snyk.sarif
+        - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Run Snyk test
+        run: snyk test --all-projects --detection-depth=2 --exclude=node_modules
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      

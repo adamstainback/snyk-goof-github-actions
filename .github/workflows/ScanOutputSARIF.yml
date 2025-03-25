@@ -41,7 +41,7 @@ jobs:
         continue-on-error: true
 
       - name: Generate SARIF report
-        run: snyk test --sarif-file-output=snyk.sarif --all-projects --detection-depth=2 --exclude=node_modules --severity-threshold=low
+        run: snyk test --sarif-file-output=snyk.sarif --all-projects --detection-depth=2 --exclude=node_modules --severity-threshold=low > snyk.sarif
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         continue-on-error: true

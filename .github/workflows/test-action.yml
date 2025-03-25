@@ -1,5 +1,8 @@
 name: Snyk Security Scan
 
+env:
+  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
 on:
   pull_request:
   push:

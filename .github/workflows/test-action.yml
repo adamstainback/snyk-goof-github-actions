@@ -23,17 +23,20 @@ jobs:
     - name: Install dependencies
       run: npm install
 
+    - name: Install Snyk CLI
+      uses: snyk/actions/setup@master
+
     - name: Run Snyk test
       run: snyk test --all-projects --detection-depth=2 --exclude=node_modules
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-    - name: Run Snyk monitor (optional - sends data to Snyk dashboard)
+    - name: Monitor with Snyk (optional)
       run: snyk monitor --all-projects --detection-depth=2 --exclude=node_modules
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-    - name: Output SARIF for GitHub Code Scanning (optional)
+    - name: Generate SARIF report
       run: snyk test --sarif-file-output=snyk.sarif --all-projects --detection-depth=2 --exclude=node_modules
       env:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}

@@ -29,7 +29,7 @@ jobs:
     - name: Run Snyk test
       run: snyk test --all-projects --detection-depth=2 --exclude=node_modules
       env:
-      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       continue-on-error: true
   
 

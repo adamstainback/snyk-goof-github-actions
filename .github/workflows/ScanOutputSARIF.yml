@@ -42,7 +42,7 @@ jobs:
 
       - name: Fix undefined severity in OSS SARIF
         run: |
-          sed -i 's/"security-severity": "undefined"/"security-severity": 0/g' snyk-oss.sarif
+          sed -i 's/"security-severity": "undefined"/"security-severity": "0"/g' snyk-oss.sarif
 
       - name: "Debug: List SARIF files"
         run: |

@@ -40,37 +40,54 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         continue-on-error: true
 
+      - name: Debug: List SARIF file presence and size
+        run: |
+          ls -lh *.sarif || true
+
       - name: Sanitize SARIF files (OSS + Code)
         run: |
-          for file in snyk-oss.sarif snyk-code.sarif; do
-            if [ -f "$file" ]; then
-              echo "Sanitizing $file"
-              node -e "
-              const fs = require('fs');
-              const path = '$file';
-              const sarif = JSON.parse(fs.readFileSync(path, 'utf8'));
-              let fixed = false;
+          cat <<EOF > sanitize.js
+          const fs = require('fs');
+          const files = ['snyk-oss.sarif', 'snyk-code.sarif'];
 
-              for (const run of sarif.runs || []) {
-                const rules = run.tool?.driver?.rules || [];
-                for (const rule of rules) {
-                  rule.properties = rule.properties || {};
-                  if (typeof rule.properties.securitySeverity !== 'number') {
-                    rule.properties.securitySeverity = 3.0;
-                    fixed = true;
-                  }
+          for (const file of files) {
+            if (!fs.existsSync(file)) {
+              console.warn(\`⚠️ File not found: \${file}\`);
+              continue;
+            }
+
+            console.log(\`🧼 Sanitizing: \${file}\`);
+            const sarif = JSON.parse(fs.readFileSync(file, 'utf8'));
+            let fixed = false;
+
+            for (const run of sarif.runs || []) {
+              const rules = run.tool?.driver?.rules || [];
+              for (const rule of rules) {
+                rule.properties = rule.properties || {};
+                if (typeof rule.properties.securitySeverity !== 'number') {
+                  rule.properties.securitySeverity = 3.0;
+                  fixed = true;
                 }
               }
+            }
 
-              if (fixed) {
-                fs.writeFileSync(path, JSON.stringify(sarif, null, 2));
-                console.log('✅ $file sanitized and saved.');
-              } else {
-                console.log('✅ $file already clean.');
-              }
-              "
-            fi
-          done
+            if (fixed) {
+              fs.writeFileSync(file, JSON.stringify(sarif, null, 2));
+              console.log(\`✅ \${file} sanitized and saved.\`);
+            } else {
+              console.log(\`✅ \${file} already clean.\`);
+            }
+          }
+          EOF
+
+          node sanitize.js
+
+      - name: Debug: Validate sanitized SARIF contents
+        run: |
+          echo "--- snyk-oss.sarif ---"
+          grep -i securitySeverity snyk-oss.sarif || echo "None found"
+          echo "--- snyk-code.sarif ---"
+          grep -i securitySeverity snyk-code.sarif || echo "None found"
 
       - name: Upload OSS SARIF to GitHub Code Scanning
         if: always()

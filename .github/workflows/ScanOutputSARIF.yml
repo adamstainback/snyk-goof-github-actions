@@ -12,41 +12,66 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🧾 Checkout code
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: 🧱 Set up Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name: 📦 Install dependencies
+      - name: Install dependencies
         run: |
           npm install
           npm install http-signature
 
-      - name: 🔧 Install Snyk CLI
+      - name: Install Snyk CLI
         uses: snyk/actions/setup@master
 
-      - name: 🔍 Run Snyk test (don't break CI)
+      - name: Run Snyk test (non-blocking)
         run: snyk test --all-projects --detection-depth=2 --exclude=node_modules
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         continue-on-error: true
 
-      - name: 📊 Run Snyk monitor (optional)
+      - name: Run Snyk monitor (optional)
         run: snyk monitor --all-projects --detection-depth=2 --exclude=node_modules
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         continue-on-error: true
 
-      - name: 🧨 Generate SARIF report
+      - name: Generate SARIF report
         run: snyk test --sarif-file-output=snyk.sarif --all-projects --detection-depth=2 --exclude=node_modules --severity-threshold=low
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         continue-on-error: true
 
-      - name: ☁️ Upload SARIF to GitHub Code Scanning
+      - name: Sanitize SARIF (fix invalid severity values)
+        run: |
+          node -e "
+          const fs = require('fs');
+          const path = 'snyk.sarif';
+          const sarif = JSON.parse(fs.readFileSync(path, 'utf8'));
+          let fixed = false;
+          for (const run of sarif.runs || []) {
+            for (const rule of run.tool?.driver?.rules || []) {
+              const sev = rule.properties?.securitySeverity;
+              if (typeof sev !== 'number') {
+                if (!rule.properties) rule.properties = {};
+                rule.properties.securitySeverity = 3.0;
+                fixed = true;
+              }
+            }
+          }
+          if (fixed) {
+            fs.writeFileSync(path, JSON.stringify(sarif, null, 2));
+            console.log('SARIF sanitized: fixed undefined or null securitySeverity values.');
+          } else {
+            console.log('SARIF already clean.');
+          }
+          "
+
+      - name: Upload SARIF to GitHub Code Scanning
         if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:

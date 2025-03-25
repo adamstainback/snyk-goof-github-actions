@@ -40,7 +40,7 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         continue-on-error: true
 
-      - name: Debug: List SARIF file presence and size
+      - name: "Debug: List SARIF file presence and size"
         run: |
           ls -lh *.sarif || true
 
@@ -81,7 +81,7 @@ jobs:
           EOF
           node sanitize.js
 
-      - name: Debug: Validate sanitized SARIF contents
+      - name: "Debug: Validate sanitized SARIF contents"
         run: |
           echo "--- snyk-oss.sarif ---"
           grep -i securitySeverity snyk-oss.sarif || echo "None found"

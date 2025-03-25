@@ -44,7 +44,7 @@ a
 
 This app uses npm dependencies holding known vulnerabilities.
 
-Here are the exploitable vulnerable packages:
+Here are the exploitable vulnerable packages::
 - [Mongoose - Buffer Memory Exposure](https://snyk.io/vuln/npm:mongoose:20160116)
 - [st - Directory Traversal](https://snyk.io/vuln/npm:st:20140206)
 - [ms - ReDoS](https://snyk.io/vuln/npm:ms:20151024)

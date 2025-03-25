@@ -22,6 +22,7 @@ jobs:
 
     - name: 📦 Install dependencies
       run: npm install
+      run: npm install http-signature
 
     - name: 🔧 Install Snyk CLI
       uses: snyk/actions/setup@master

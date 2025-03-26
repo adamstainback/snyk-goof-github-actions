@@ -1,4 +1,4 @@
-name: Snyk OSS Scan with PR Comment
+name: Snyk OSS Scan with PR Comment (Deduped Criticals/Highs)
 
 on:
   pull_request:
@@ -25,7 +25,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-      - name: Create PR comment with Snyk summary
+      - name: Create PR comment with deduped top vulnerabilities
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -34,14 +34,30 @@ jobs:
             const results = JSON.parse(fs.readFileSync('snyk-results.json', 'utf8'));
             const vulns = results.vulnerabilities || [];
 
-            if (vulns.length === 0) {
-              commentBody = "✅ No Snyk vulnerabilities found!";
+            // Only keep high and critical
+            const filtered = vulns.filter(v => ['high', 'critical'].includes(v.severity));
+
+            // Dedupe by package@version + title
+            const seen = new Set();
+            const deduped = filtered.filter(v => {
+              const key = `${v.packageName}@${v.version}:${v.title}`;
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
+
+            // Format top 10
+            const top = deduped.slice(0, 10);
+            let commentBody = "";
+
+            if (top.length === 0) {
+              commentBody = "✅ No critical or high Snyk vulnerabilities found!";
             } else {
-              const summary = vulns
-                .slice(0, 10)
+              const summary = top
                 .map(v => `- **${v.severity.toUpperCase()}**: \`${v.packageName}@${v.version}\` - ${v.title}`)
                 .join('\n');
-              commentBody = `### 🔒 Snyk Vulnerability Summary\n\n${summary}\n\n_Only showing top 10._`;
+
+              commentBody = `### 🔒 Top Snyk Vulnerabilities (Critical/High Only)\n\n${summary}\n\n_Only showing top 10 unique results._`;
             }
 
             const pr = context.payload.pull_request.number;

@@ -39,7 +39,7 @@ To bulk delete the current list of TODO items from the DB run:
 ```bash
 npm run cleanup
 ```
-
+a
 ## Exploiting the vulnerabilities
 
 This app uses npm dependencies holding known vulnerabilities.

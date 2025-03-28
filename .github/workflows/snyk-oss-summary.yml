@@ -1,0 +1,125 @@
+name: Snyk OSS Summary with PR Comment
+
+on:
+  pull_request:
+
+env:
+  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+jobs:
+  snyk-oss-summary:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Snyk CLI
+        uses: snyk/actions/setup@master
+
+      - name: Run Snyk OSS scan
+        run: snyk test --all-projects --json > snyk-oss-results.json || true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Generate PR comment summary
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('snyk-oss-results.json', 'utf8'));
+          const severityRank = s => ({critical: 4, high: 3}[s] || 0);
+          const severityIcons = { critical: '🔴', high: '🟠' };
+          const manifestGroups = {};
+
+          const projects = Array.isArray(data) ? data : [data];
+
+          for (const project of projects) {
+            const manifest = project.displayTargetFile || project.targetFile || project.projectName || 'unknown';
+            for (const vuln of project.vulnerabilities || []) {
+              if (!['critical', 'high'].includes(vuln.severity)) continue;
+              manifestGroups[manifest] = manifestGroups[manifest] || [];
+              manifestGroups[manifest].push(vuln);
+            }
+          }
+
+          let output = '<!-- SNYK_OSS_SUMMARY -->\n';
+          output += '## 🔐 Snyk OSS Vulnerabilities by Manifest\n\n';
+
+          for (const file in manifestGroups) {
+            const vulns = manifestGroups[file].sort((a, b) => severityRank(b.severity) - severityRank(a.severity));
+
+            const vulnMap = new Map();
+            const criticalPackages = new Set();
+            const highPackages = new Set();
+            let totalOccurrences = 0;
+
+            for (const v of vulns) {
+              const key = `${v.packageName}@${v.version}`;
+              const severity = v.severity;
+              if (!vulnMap.has(key)) {
+                vulnMap.set(key, { vuln: v, count: 0, titles: new Set(), severity });
+              }
+              const entry = vulnMap.get(key);
+              entry.count++;
+              entry.titles.add(v.title);
+              totalOccurrences++;
+
+              if (severity === 'critical') criticalPackages.add(key);
+              if (severity === 'high') highPackages.add(key);
+            }
+
+            // Corrected occurrence counting
+            let criticalCount = 0;
+            let highCount = 0;
+            for (const { count, severity } of vulnMap.values()) {
+              if (severity === 'critical') criticalCount += count;
+              if (severity === 'high') highCount += count;
+            }
+
+            const totalUniquePackages = vulnMap.size;
+
+            output += `### 📦 ${file}  \n`;
+            output += `🔴 ${criticalCount} critical vulnerability occurrences across ${criticalPackages.size} unique packages\n`;
+            output += `🟠 ${highCount} high vulnerability occurrences across ${highPackages.size} unique packages\n`;
+            output += `**${totalUniquePackages} total affected packages (${totalOccurrences} total issues)**\n\n`;
+
+            output += `| Severity | Package | Occurrences | Title | Fix Available | Advisor |\n`;
+            output += `|----------|---------|-------------|-------|----------------|---------|\n`;
+
+            for (const [key, { vuln, count, titles, severity }] of vulnMap.entries()) {
+              const icon = severityIcons[severity] || '';
+              const snykUrl = vuln.id ? `https://security.snyk.io/vuln/${vuln.id}` : '';
+              const pkgUrl = `https://www.npmjs.com/package/${vuln.packageName}/v/${vuln.version}`;
+              const advisorUrl = `https://security.snyk.io/package/npm/${vuln.packageName}/${vuln.version}`;
+              const fix = vuln.fixedIn?.[0] || 'N/A';
+              const title = [...titles][0];
+              output += `| ${icon} ${severity.toUpperCase()} | [${vuln.packageName}@${vuln.version}](${pkgUrl}) | ${count} | [${title}](${snykUrl}) | ${fix} | [View](${advisorUrl}) |\n`;
+            }
+            output += '\n';
+          }
+
+          if (output.trim().length < 50) {
+            output += '_No critical or high vulnerabilities found._\n';
+          }
+
+          fs.writeFileSync('pr-comment.md', output);
+          EOF
+
+      - name: Add summary to PR Checks tab
+        run: cat pr-comment.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Edit or create Snyk PR comment
+        if: github.event_name == 'pull_request'
+        run: |
+          COMMENT_ID=$(gh pr view "$PR_URL" --json comments -q '.comments[] | select(.body | contains("<!-- SNYK_OSS_SUMMARY -->")) | .id')
+          if [ -n "$COMMENT_ID" ]; then
+            gh pr comment "$PR_URL" --edit-last --body-file pr-comment.md
+          else
+            gh pr comment "$PR_URL" --body-file pr-comment.md
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}

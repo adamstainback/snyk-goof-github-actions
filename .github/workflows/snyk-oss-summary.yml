@@ -70,7 +70,7 @@ jobs:
             const totalIssues = Array.from(vulnMap.values()).reduce((sum, v) => sum + v.count, 0);
 
             output += `### 📦 ${file}  \n`;
-            output += `🔴 ${totalCritical} critical vulnerabilities and 🟠 ${totalHigh} high vulnerabilities across ${vulnMap.size} packages (total ${totalIssues} occurrences).\n\n`;
+            output += `🔴 ${totalCritical} critical vulnerabilities and 🟠 ${totalHigh} high vulnerabilities across ${vulnMap.size} unique packages (total ${totalIssues} occurrences).\n\n`;
             output += `| Severity | Package | Occurrences | Title | Fix Available | Advisor |\n`;
             output += `|----------|---------|-------------|-------|----------------|---------|\n`;
 

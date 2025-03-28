@@ -1,72 +1,40 @@
-name: Snyk OSS Summary with PR Comment
+- name: Generate PR comment summary
+run: |
+  node <<'EOF'
+  const fs = require('fs');
+  const data = JSON.parse(fs.readFileSync('snyk-oss-results.json', 'utf8'));
+  const severityRank = s => ({critical:4, high:3, medium:2, low:1}[s] || 0);
+  const manifestGroups = {};
 
-on:
-  pull_request:
-  push:
+  const projects = Array.isArray(data) ? data : [data]; // Handle both single and multi-project output
 
-env:
-  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+  for (const project of projects) {
+    const manifest = project.displayTargetFile || project.targetFile || project.projectName || 'unknown';
+    for (const vuln of project.vulnerabilities || []) {
+      manifestGroups[manifest] = manifestGroups[manifest] || [];
+      manifestGroups[manifest].push(vuln);
+    }
+  }
 
-jobs:
-  snyk-oss-summary:
-    runs-on: ubuntu-latest
+  let output = '## 🔐 Snyk OSS Vulnerabilities by Manifest\n\n';
+  for (const file in manifestGroups) {
+    const vulns = manifestGroups[file]
+      .sort((a, b) => severityRank(b.severity) - severityRank(a.severity))
+      .slice(0, 5);
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    output += `### 📦 ${file}\n`;
+    output += `| Severity | Package | Title | Fix Available |\n`;
+    output += `|----------|---------|-------|----------------|\n`;
+    for (const v of vulns) {
+      const fix = v.fixedIn?.[0] || 'N/A';
+      output += `| ${v.severity.toUpperCase()} | ${v.packageName}@${v.version} | ${v.title} | ${fix} |\n`;
+    }
+    output += '\n';
+  }
 
-      - name: Install dependencies
-        run: npm install
+  if (output.trim().length < 50) {
+    output += '_No vulnerabilities found._\n';
+  }
 
-      - name: Install Snyk CLI
-        uses: snyk/actions/setup@master
-
-      - name: Run Snyk OSS scan
-        run: snyk test --all-projects --json > snyk-oss-results.json || true
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-
-      - name: Generate PR comment summary
-        run: |
-          node <<'EOF'
-          const fs = require('fs');
-          const data = JSON.parse(fs.readFileSync('snyk-oss-results.json', 'utf8'));
-          const severityRank = s => ({critical:4, high:3, medium:2, low:1}[s] || 0);
-          const manifestGroups = {};
-
-          for (const project of data.projects || []) {
-            const file = project.targetFile || 'unknown';
-            for (const vuln of project.vulnerabilities || []) {
-              manifestGroups[file] = manifestGroups[file] || [];
-              manifestGroups[file].push(vuln);
-            }
-          }
-
-          let output = '## \ud83d\udd10 Snyk OSS Vulnerabilities by Manifest\n\n';
-          for (const file in manifestGroups) {
-            const vulns = manifestGroups[file]
-              .sort((a, b) => severityRank(b.severity) - severityRank(a.severity))
-              .slice(0, 5); // Top 5 by severity
-
-            output += `### \ud83d\udcc6 ${file}\n`;
-            output += `| Severity | Package | Title | Fix Available |\n`;
-            output += `|----------|---------|-------|----------------|\n`;
-            for (const v of vulns) {
-              const fix = v.fixedIn?.[0] || 'N/A';
-              output += `| ${v.severity.toUpperCase()} | ${v.packageName}@${v.version} | ${v.title} | ${fix} |\n`;
-            }
-            output += '\n';
-          }
-
-          fs.writeFileSync('pr-comment.md', output);
-          EOF
-
-      - name: Add summary to PR Checks tab
-        run: cat pr-comment.md >> $GITHUB_STEP_SUMMARY
-
-      - name: Post comment to PR
-        if: github.event_name == 'pull_request'
-        run: gh pr comment "$PR_URL" --body-file pr-comment.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
+  fs.writeFileSync('pr-comment.md', output);
+  EOF

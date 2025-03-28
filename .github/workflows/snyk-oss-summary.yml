@@ -1,9 +1,9 @@
-name: Snyk OSS Summary by Manifest
+name: Snyk OSS Summary with PR Comment
 
 on:
   pull_request:
   push:
-
+        
 env:
   SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
@@ -26,12 +26,11 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-      - name: Generate summary by manifest
+      - name: Generate PR comment summary
+        id: generate_comment
         run: |
-          echo "## 🔍 Snyk OSS Vulnerabilities by Manifest" >> $GITHUB_STEP_SUMMARY
-          node <<'EOF' >> $GITHUB_STEP_SUMMARY
+          node <<'EOF' > pr-comment.md
           const fs = require('fs');
-
           const data = JSON.parse(fs.readFileSync('snyk-oss-results.json', 'utf8'));
           const severityRank = s => ({critical:4, high:3, medium:2, low:1}[s] || 0);
           const manifestGroups = {};
@@ -44,16 +43,27 @@ jobs:
             }
           }
 
+          console.log(`## 🔐 Snyk OSS Vulnerabilities by Manifest\n`);
           for (const file in manifestGroups) {
             const vulns = manifestGroups[file];
             const top = vulns
               .sort((a, b) => severityRank(b.severity) - severityRank(a.severity))
               .slice(0, 5); // Top 5 per manifest
 
-            console.log(`### 📄 ${file}`);
+            console.log(`### 📦 ${file}`);
             for (const v of top) {
               console.log(`- **${v.severity.toUpperCase()}**: ${v.packageName} – ${v.title}`);
             }
             console.log('');
           }
           EOF
+
+      - name: Copy summary to PR Checks tab
+        run: cat pr-comment.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Post comment to PR
+        if: github.event_name == 'pull_request'
+        run: gh pr comment "$PR_URL" --body-file pr-comment.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}

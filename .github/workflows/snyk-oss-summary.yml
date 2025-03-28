@@ -1,40 +1,78 @@
-- name: Generate PR comment summary
-run: |
-  node <<'EOF'
-  const fs = require('fs');
-  const data = JSON.parse(fs.readFileSync('snyk-oss-results.json', 'utf8'));
-  const severityRank = s => ({critical:4, high:3, medium:2, low:1}[s] || 0);
-  const manifestGroups = {};
+name: Snyk OSS Summary with PR Comment
 
-  const projects = Array.isArray(data) ? data : [data]; // Handle both single and multi-project output
+on:
+  pull_request:
+  push:
 
-  for (const project of projects) {
-    const manifest = project.displayTargetFile || project.targetFile || project.projectName || 'unknown';
-    for (const vuln of project.vulnerabilities || []) {
-      manifestGroups[manifest] = manifestGroups[manifest] || [];
-      manifestGroups[manifest].push(vuln);
-    }
-  }
+env:
+  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
-  let output = '## 🔐 Snyk OSS Vulnerabilities by Manifest\n\n';
-  for (const file in manifestGroups) {
-    const vulns = manifestGroups[file]
-      .sort((a, b) => severityRank(b.severity) - severityRank(a.severity))
-      .slice(0, 5);
+jobs:
+  snyk-oss-summary:
+    runs-on: ubuntu-latest
 
-    output += `### 📦 ${file}\n`;
-    output += `| Severity | Package | Title | Fix Available |\n`;
-    output += `|----------|---------|-------|----------------|\n`;
-    for (const v of vulns) {
-      const fix = v.fixedIn?.[0] || 'N/A';
-      output += `| ${v.severity.toUpperCase()} | ${v.packageName}@${v.version} | ${v.title} | ${fix} |\n`;
-    }
-    output += '\n';
-  }
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-  if (output.trim().length < 50) {
-    output += '_No vulnerabilities found._\n';
-  }
+      - name: Install dependencies
+        run: npm install
 
-  fs.writeFileSync('pr-comment.md', output);
-  EOF
+      - name: Install Snyk CLI
+        uses: snyk/actions/setup@master
+
+      - name: Run Snyk OSS scan
+        run: snyk test --all-projects --json > snyk-oss-results.json || true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Generate PR comment summary
+        run: |
+          node <<'EOF'
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync('snyk-oss-results.json', 'utf8'));
+          const severityRank = s => ({critical:4, high:3, medium:2, low:1}[s] || 0);
+          const manifestGroups = {};
+
+          const projects = Array.isArray(data) ? data : [data];
+
+          for (const project of projects) {
+            const manifest = project.displayTargetFile || project.targetFile || project.projectName || 'unknown';
+            for (const vuln of project.vulnerabilities || []) {
+              manifestGroups[manifest] = manifestGroups[manifest] || [];
+              manifestGroups[manifest].push(vuln);
+            }
+          }
+
+          let output = '## 🔐 Snyk OSS Vulnerabilities by Manifest\n\n';
+          for (const file in manifestGroups) {
+            const vulns = manifestGroups[file]
+              .sort((a, b) => severityRank(b.severity) - severityRank(a.severity))
+              .slice(0, 5);
+
+            output += `### 📦 ${file}\n`;
+            output += `| Severity | Package | Title | Fix Available |\n`;
+            output += `|----------|---------|-------|----------------|\n`;
+            for (const v of vulns) {
+              const fix = v.fixedIn?.[0] || 'N/A';
+              output += `| ${v.severity.toUpperCase()} | ${v.packageName}@${v.version} | ${v.title} | ${fix} |\n`;
+            }
+            output += '\n';
+          }
+
+          if (output.trim().length < 50) {
+            output += '_No vulnerabilities found._\n';
+          }
+
+          fs.writeFileSync('pr-comment.md', output);
+          EOF
+
+      - name: Add summary to PR Checks tab
+        run: cat pr-comment.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Post comment to PR
+        if: github.event_name == 'pull_request'
+        run: gh pr comment "$PR_URL" --body-file pr-comment.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}

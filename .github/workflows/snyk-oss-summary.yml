@@ -54,14 +54,15 @@ jobs:
 
             output += `### 📦 ${file}  \n`;
             output += `**${vulns.length} unique vulnerabilities across ${new Set(vulns.map(v => v.packageName)).size} packages**\n\n`;
-            output += `| Severity | Package | Title | Fix Available |\n`;
-            output += `|----------|---------|-------|----------------|\n`;
+            output += `| Severity | Package | Title | Fix Available | Advisor |\n`;
+            output += `|----------|---------|-------|----------------|---------|\n`;
             for (const v of vulns.slice(0, 25)) {
               const fix = v.fixedIn?.[0] || 'N/A';
               const icon = severityIcons[v.severity] || '';
               const snykUrl = v.id ? `https://security.snyk.io/vuln/${v.id}` : '';
               const pkgUrl = `https://www.npmjs.com/package/${v.packageName}/v/${v.version}`;
-              output += `| ${icon} ${v.severity.toUpperCase()} | [${v.packageName}@${v.version}](${pkgUrl}) | [${v.title}](${snykUrl}) | ${fix} |\n`;
+              const advisorUrl = `https://snyk.io/advisor/npm-package/${v.packageName}`;
+              output += `| ${icon} ${v.severity.toUpperCase()} | [${v.packageName}@${v.version}](${pkgUrl}) | [${v.title}](${snykUrl}) | ${fix} | [View](${advisorUrl}) |\n`;
             }
             output += '\n';
           }

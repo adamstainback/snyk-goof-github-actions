@@ -3,6 +3,7 @@ name: Snyk OSS Summary with PR Comment
 on:
   pull_request:
   push:
+
 env:
   SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
@@ -32,7 +33,6 @@ jobs:
           const data = JSON.parse(fs.readFileSync('snyk-oss-results.json', 'utf8'));
           const severityRank = s => ({critical:4, high:3, medium:2, low:1}[s] || 0);
           const manifestGroups = {};
-          let output = '## 🔐 Snyk OSS Vulnerabilities by Manifest\n\n';
 
           for (const project of data.projects || []) {
             const file = project.targetFile || 'unknown';
@@ -42,17 +42,20 @@ jobs:
             }
           }
 
+          let output = '## \ud83d\udd10 Snyk OSS Vulnerabilities by Manifest\n\n';
           for (const file in manifestGroups) {
-            const vulns = manifestGroups[file];
-            const top = vulns
+            const vulns = manifestGroups[file]
               .sort((a, b) => severityRank(b.severity) - severityRank(a.severity))
-              .slice(0, 5); // top 5 per manifest
+              .slice(0, 5); // Top 5 by severity
 
-            output += `### 📦 ${file}\n`;
-            for (const v of top) {
-              output += `- **${v.severity.toUpperCase()}**: ${v.packageName} – ${v.title}\n`;
+            output += `### \ud83d\udcc6 ${file}\n`;
+            output += `| Severity | Package | Title | Fix Available |\n`;
+            output += `|----------|---------|-------|----------------|\n`;
+            for (const v of vulns) {
+              const fix = v.fixedIn?.[0] || 'N/A';
+              output += `| ${v.severity.toUpperCase()} | ${v.packageName}@${v.version} | ${v.title} | ${fix} |\n`;
             }
-            output += `\n`;
+            output += '\n';
           }
 
           fs.writeFileSync('pr-comment.md', output);

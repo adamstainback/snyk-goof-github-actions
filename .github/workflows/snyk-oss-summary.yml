@@ -52,8 +52,6 @@ jobs:
             const vulns = manifestGroups[file].sort((a, b) => severityRank(b.severity) - severityRank(a.severity));
 
             const vulnMap = new Map();
-            let criticalCount = 0;
-            let highCount = 0;
             const criticalPackages = new Set();
             const highPackages = new Set();
             let totalOccurrences = 0;
@@ -69,14 +67,16 @@ jobs:
               entry.titles.add(v.title);
               totalOccurrences++;
 
-              if (severity === 'critical') {
-                criticalCount++;
-                criticalPackages.add(key);
-              }
-              if (severity === 'high') {
-                highCount++;
-                highPackages.add(key);
-              }
+              if (severity === 'critical') criticalPackages.add(key);
+              if (severity === 'high') highPackages.add(key);
+            }
+
+            // Corrected occurrence counting
+            let criticalCount = 0;
+            let highCount = 0;
+            for (const { count, severity } of vulnMap.values()) {
+              if (severity === 'critical') criticalCount += count;
+              if (severity === 'high') highCount += count;
             }
 
             const totalUniquePackages = vulnMap.size;

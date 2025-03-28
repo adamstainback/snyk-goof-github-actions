@@ -3,7 +3,6 @@ name: Snyk OSS Summary with PR Comment
 on:
   pull_request:
   push:
-        
 env:
   SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
@@ -27,13 +26,13 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
       - name: Generate PR comment summary
-        id: generate_comment
         run: |
-          node <<'EOF' > pr-comment.md
+          node <<'EOF'
           const fs = require('fs');
           const data = JSON.parse(fs.readFileSync('snyk-oss-results.json', 'utf8'));
           const severityRank = s => ({critical:4, high:3, medium:2, low:1}[s] || 0);
           const manifestGroups = {};
+          let output = '## 🔐 Snyk OSS Vulnerabilities by Manifest\n\n';
 
           for (const project of data.projects || []) {
             const file = project.targetFile || 'unknown';
@@ -43,22 +42,23 @@ jobs:
             }
           }
 
-          console.log(`## 🔐 Snyk OSS Vulnerabilities by Manifest\n`);
           for (const file in manifestGroups) {
             const vulns = manifestGroups[file];
             const top = vulns
               .sort((a, b) => severityRank(b.severity) - severityRank(a.severity))
-              .slice(0, 5); // Top 5 per manifest
+              .slice(0, 5); // top 5 per manifest
 
-            console.log(`### 📦 ${file}`);
+            output += `### 📦 ${file}\n`;
             for (const v of top) {
-              console.log(`- **${v.severity.toUpperCase()}**: ${v.packageName} – ${v.title}`);
+              output += `- **${v.severity.toUpperCase()}**: ${v.packageName} – ${v.title}\n`;
             }
-            console.log('');
+            output += `\n`;
           }
+
+          fs.writeFileSync('pr-comment.md', output);
           EOF
 
-      - name: Copy summary to PR Checks tab
+      - name: Add summary to PR Checks tab
         run: cat pr-comment.md >> $GITHUB_STEP_SUMMARY
 
       - name: Post comment to PR

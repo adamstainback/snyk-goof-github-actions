@@ -77,7 +77,7 @@ jobs:
       - name: Delete existing Snyk comment (if exists)
         if: github.event_name == 'pull_request'
         run: |
-          COMMENT_ID=$(gh pr view "$PR_URL" --json comments -q ".comments[] | select(.body | contains('<!-- SNYK_OSS_SUMMARY -->')) | .id")
+          COMMENT_ID=$(gh pr view "$PR_URL" --json comments -q '.comments[] | select(.body | contains("<!-- SNYK_OSS_SUMMARY -->")) | .id')
           if [ -n "$COMMENT_ID" ]; then
             gh pr comment "$PR_URL" --delete "$COMMENT_ID"
           fi

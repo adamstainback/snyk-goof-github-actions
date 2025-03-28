@@ -30,7 +30,7 @@ jobs:
           node <<'EOF'
           const fs = require('fs');
           const data = JSON.parse(fs.readFileSync('snyk-oss-results.json', 'utf8'));
-          const severityRank = s => ({critical:4, high:3}[s] || 0);
+          const severityRank = s => ({critical: 4, high: 3}[s] || 0);
           const severityIcons = { critical: '🔴', high: '🟠' };
           const manifestGroups = {};
 
@@ -51,37 +51,37 @@ jobs:
           for (const file in manifestGroups) {
             const vulns = manifestGroups[file].sort((a, b) => severityRank(b.severity) - severityRank(a.severity));
 
-            const packageVulnMap = new Map();
+            const vulnMap = new Map();
             let totalCritical = 0;
             let totalHigh = 0;
-            let vulnCount = 0;
 
             for (const v of vulns) {
               const key = `${v.packageName}@${v.version}`;
-              const existing = packageVulnMap.get(key) || { count: 0, vuln: v, vulnTitles: new Set(), severity: v.severity };
-              existing.count++;
-              existing.vulnTitles.add(v.title);
-              existing.severity = v.severity;
-              packageVulnMap.set(key, existing);
-
+              if (!vulnMap.has(key)) {
+                vulnMap.set(key, { vuln: v, count: 0, titles: new Set(), severity: v.severity });
+              }
+              const entry = vulnMap.get(key);
+              entry.count++;
+              entry.titles.add(v.title);
               if (v.severity === 'critical') totalCritical++;
               if (v.severity === 'high') totalHigh++;
-              vulnCount++;
             }
 
-            output += `### 📦 ${file}  \n`;
-            output += `🔴 ${totalCritical} critical vulnerabilities and 🟠 ${totalHigh} high vulnerabilities across ${packageVulnMap.size} packages (total ${vulnCount} issues).\n\n`;
-            output += `| Severity | Package | Vulns | Title | Fix Available | Advisor |\n`;
-            output += `|----------|---------|--------|-------|----------------|---------|\n`;
+            const totalIssues = Array.from(vulnMap.values()).reduce((sum, v) => sum + v.count, 0);
 
-            for (const [key, { vuln, count, vulnTitles, severity }] of packageVulnMap.entries()) {
+            output += `### 📦 ${file}  \n`;
+            output += `🔴 ${totalCritical} critical vulnerabilities and 🟠 ${totalHigh} high vulnerabilities across ${vulnMap.size} packages (total ${totalIssues} occurrences).\n\n`;
+            output += `| Severity | Package | Occurrences | Title | Fix Available | Advisor |\n`;
+            output += `|----------|---------|-------------|-------|----------------|---------|\n`;
+
+            for (const [key, { vuln, count, titles, severity }] of vulnMap.entries()) {
               const icon = severityIcons[severity] || '';
               const snykUrl = vuln.id ? `https://security.snyk.io/vuln/${vuln.id}` : '';
               const pkgUrl = `https://www.npmjs.com/package/${vuln.packageName}/v/${vuln.version}`;
               const advisorUrl = `https://security.snyk.io/package/npm/${vuln.packageName}/${vuln.version}`;
               const fix = vuln.fixedIn?.[0] || 'N/A';
-              const vulnTitle = [...vulnTitles][0];
-              output += `| ${icon} ${severity.toUpperCase()} | [${vuln.packageName}@${vuln.version}](${pkgUrl}) | ${count} | [${vulnTitle}](${snykUrl}) | ${fix} | [View](${advisorUrl}) |\n`;
+              const title = [...titles][0];
+              output += `| ${icon} ${severity.toUpperCase()} | [${vuln.packageName}@${vuln.version}](${pkgUrl}) | ${count} | [${title}](${snykUrl}) | ${fix} | [View](${advisorUrl}) |\n`;
             }
             output += '\n';
           }

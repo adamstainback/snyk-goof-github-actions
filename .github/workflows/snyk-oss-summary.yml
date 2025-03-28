@@ -59,7 +59,9 @@ jobs:
             for (const v of vulns.slice(0, 25)) {
               const fix = v.fixedIn?.[0] || 'N/A';
               const icon = severityIcons[v.severity] || '';
-              output += `| ${icon} ${v.severity.toUpperCase()} | ${v.packageName}@${v.version} | ${v.title} | ${fix} |\n`;
+              const snykUrl = v.id ? `https://security.snyk.io/vuln/${v.id}` : '';
+              const pkgUrl = `https://www.npmjs.com/package/${v.packageName}/v/${v.version}`;
+              output += `| ${icon} ${v.severity.toUpperCase()} | [${v.packageName}@${v.version}](${pkgUrl}) | [${v.title}](${snykUrl}) | ${fix} |\n`;
             }
             output += '\n';
           }

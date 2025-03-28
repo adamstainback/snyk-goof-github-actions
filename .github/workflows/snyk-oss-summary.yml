@@ -52,17 +52,29 @@ jobs:
             const vulns = Array.from(manifestGroups[file].values())
               .sort((a, b) => severityRank(b.severity) - severityRank(a.severity));
 
+            const pkgCount = new Map();
+            for (const v of vulns) {
+              const name = `${v.packageName}@${v.version}`;
+              pkgCount.set(name, (pkgCount.get(name) || 0) + 1);
+            }
+
             output += `### 📦 ${file}  \n`;
-            output += `**${vulns.length} unique vulnerabilities across ${new Set(vulns.map(v => v.packageName)).size} packages**\n\n`;
-            output += `| Severity | Package | Title | Fix Available | Advisor |\n`;
-            output += `|----------|---------|-------|----------------|---------|\n`;
-            for (const v of vulns.slice(0, 25)) {
-              const fix = v.fixedIn?.[0] || 'N/A';
+            output += `**${vulns.length} unique vulnerabilities across ${pkgCount.size} packages**\n\n`;
+            output += `| Severity | Package | Vulns | Title | Fix Available | Advisor |\n`;
+            output += `|----------|---------|--------|-------|----------------|---------|\n`;
+
+            let shown = new Set();
+            for (const v of vulns) {
+              const key = `${v.packageName}@${v.version}`;
+              if (shown.has(key)) continue;
+              shown.add(key);
+              const count = pkgCount.get(key);
               const icon = severityIcons[v.severity] || '';
               const snykUrl = v.id ? `https://security.snyk.io/vuln/${v.id}` : '';
               const pkgUrl = `https://www.npmjs.com/package/${v.packageName}/v/${v.version}`;
               const advisorUrl = `https://snyk.io/advisor/npm-package/${v.packageName}`;
-              output += `| ${icon} ${v.severity.toUpperCase()} | [${v.packageName}@${v.version}](${pkgUrl}) | [${v.title}](${snykUrl}) | ${fix} | [View](${advisorUrl}) |\n`;
+              const fix = v.fixedIn?.[0] || 'N/A';
+              output += `| ${icon} ${v.severity.toUpperCase()} | [${v.packageName}@${v.version}](${pkgUrl}) | ${count} | [${v.title}](${snykUrl}) | ${fix} | [View](${advisorUrl}) |\n`;
             }
             output += '\n';
           }

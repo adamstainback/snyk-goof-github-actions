@@ -77,9 +77,9 @@ jobs:
       - name: Delete existing Snyk comment (if exists)
         if: github.event_name == 'pull_request'
         run: |
-          COMMENT_ID=$(gh pr view "$PR_URL" --json comments -q '.comments[] | select(.body | contains("<!-- SNYK_OSS_SUMMARY -->")) | .id')
+          COMMENT_ID=$(gh pr view "$PR_URL" --json comments -q '.comments[] | select(.body | contains("<!-- SNYK_OSS_SUMMARY -->")) | .databaseId')
           if [ -n "$COMMENT_ID" ]; then
-            gh pr comment "$PR_URL" --delete "$COMMENT_ID"
+            gh api repos/${{ github.repository }}/issues/comments/$COMMENT_ID -X DELETE -H "Authorization: token $GITHUB_TOKEN"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

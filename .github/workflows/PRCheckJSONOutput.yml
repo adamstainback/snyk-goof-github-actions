@@ -1,7 +1,7 @@
 name: Snyk OSS Scan with PR Comment (Deduped Criticals/Highs)
 
 on:
-  pull_request:
+  
 
 env:
   SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}

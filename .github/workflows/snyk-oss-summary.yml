@@ -52,27 +52,35 @@ jobs:
             const vulns = manifestGroups[file].sort((a, b) => severityRank(b.severity) - severityRank(a.severity));
 
             const vulnMap = new Map();
-            let totalCritical = 0;
-            let totalHigh = 0;
+            let totalCriticalOccurrences = 0;
+            let totalHighOccurrences = 0;
+            let criticalPackages = new Set();
+            let highPackages = new Set();
 
             for (const v of vulns) {
               const key = `${v.packageName}@${v.version}`;
+              const severity = v.severity;
               if (!vulnMap.has(key)) {
-                vulnMap.set(key, { vuln: v, count: 0, titles: new Set(), severity: v.severity });
+                vulnMap.set(key, { vuln: v, count: 0, titles: new Set(), severity });
               }
               const entry = vulnMap.get(key);
               entry.count++;
               entry.titles.add(v.title);
-              if (v.severity === 'critical') totalCritical++;
-              if (v.severity === 'high') totalHigh++;
+              if (severity === 'critical') {
+                totalCriticalOccurrences++;
+                criticalPackages.add(key);
+              }
+              if (severity === 'high') {
+                totalHighOccurrences++;
+                highPackages.add(key);
+              }
             }
 
-            const totalUniquePackages = vulnMap.size;
-            const totalOccurrences = totalCritical + totalHigh;
+            const totalUniquePackages = new Set([...vulnMap.keys()]).size;
 
             output += `### 📦 ${file}  \n`;
-            output += `🔴 ${totalCritical} critical vulnerability occurrences across ${[...vulnMap.values()].filter(v => v.severity === 'critical').length} unique packages\n`;
-            output += `🟠 ${totalHigh} high vulnerability occurrences across ${[...vulnMap.values()].filter(v => v.severity === 'high').length} unique packages\n`;
+            output += `🔴 ${totalCriticalOccurrences} critical vulnerability occurrences across ${criticalPackages.size} unique packages\n`;
+            output += `🟠 ${totalHighOccurrences} high vulnerability occurrences across ${highPackages.size} unique packages\n`;
             output += `**${totalUniquePackages} total affected packages**\n\n`;
 
             output += `| Severity | Package | Occurrences | Title | Fix Available | Advisor |\n`;

@@ -39,21 +39,22 @@ jobs:
           for (const project of projects) {
             const manifest = project.displayTargetFile || project.targetFile || project.projectName || 'unknown';
             for (const vuln of project.vulnerabilities || []) {
-              manifestGroups[manifest] = manifestGroups[manifest] || [];
-              manifestGroups[manifest].push(vuln);
+              const key = `${vuln.packageName}@${vuln.version}-${vuln.title}`;
+              manifestGroups[manifest] = manifestGroups[manifest] || new Map();
+              manifestGroups[manifest].set(key, vuln);
             }
           }
 
           let output = '## 🔐 Snyk OSS Vulnerabilities by Manifest\n\n';
           for (const file in manifestGroups) {
-            const vulns = manifestGroups[file]
-              .sort((a, b) => severityRank(b.severity) - severityRank(a.severity))
-              .slice(0, 5);
+            const vulns = Array.from(manifestGroups[file].values())
+              .sort((a, b) => severityRank(b.severity) - severityRank(a.severity));
 
-            output += `### 📦 ${file}\n`;
+            output += `### 📦 ${file}  \n`;
+            output += `**${vulns.length} unique vulnerabilities across ${new Set(vulns.map(v => v.packageName)).size} packages**\n\n`;
             output += `| Severity | Package | Title | Fix Available |\n`;
             output += `|----------|---------|-------|----------------|\n`;
-            for (const v of vulns) {
+            for (const v of vulns.slice(0, 25)) {
               const fix = v.fixedIn?.[0] || 'N/A';
               output += `| ${v.severity.toUpperCase()} | ${v.packageName}@${v.version} | ${v.title} | ${fix} |\n`;
             }

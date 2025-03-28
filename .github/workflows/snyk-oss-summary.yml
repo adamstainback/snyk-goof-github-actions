@@ -30,7 +30,7 @@ jobs:
           node <<'EOF'
           const fs = require('fs');
           const data = JSON.parse(fs.readFileSync('snyk-oss-results.json', 'utf8'));
-          const severityRank = s => ({critical:4, high:3, medium:2, low:1}[s] || 0);
+          const severityRank = s => ({critical:4, high:3}[s] || 0);
           const severityIcons = { critical: '🔴', high: '🟠' };
           const manifestGroups = {};
 
@@ -57,15 +57,19 @@ jobs:
             let criticalCount = 0;
             let highCount = 0;
 
+            const seen = new Set();
             for (const v of vulns) {
               const name = `${v.packageName}@${v.version}`;
               pkgCount.set(name, (pkgCount.get(name) || 0) + 1);
+              const uniqueKey = `${v.severity}-${v.packageName}@${v.version}-${v.title}`;
+              if (seen.has(uniqueKey)) continue;
+              seen.add(uniqueKey);
               if (v.severity === 'critical') criticalCount++;
               else if (v.severity === 'high') highCount++;
             }
 
             output += `### 📦 ${file}  \n`;
-            output += `**${criticalCount} critical and ${highCount} high vulnerabilities across ${pkgCount.size} packages**\n\n`;
+            output += `**🔴 ${criticalCount} critical vulnerabilities** and **🟠 ${highCount} high vulnerabilities** across **${pkgCount.size} packages**.\n\n`;
             output += `| Severity | Package | Vulns | Title | Fix Available | Advisor |\n`;
             output += `|----------|---------|--------|-------|----------------|---------|\n`;
 

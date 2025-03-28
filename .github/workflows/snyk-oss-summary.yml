@@ -2,7 +2,6 @@ name: Snyk OSS Summary with PR Comment
 
 on:
   pull_request:
-  push:
 
 env:
   SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -46,7 +45,9 @@ jobs:
             }
           }
 
-          let output = '## 🔐 Snyk OSS Vulnerabilities by Manifest\n\n';
+          let output = '<!-- SNYK_OSS_SUMMARY -->\n';
+          output += '## 🔐 Snyk OSS Vulnerabilities by Manifest\n\n';
+
           for (const file in manifestGroups) {
             const vulns = Array.from(manifestGroups[file].values())
               .sort((a, b) => severityRank(b.severity) - severityRank(a.severity));
@@ -72,6 +73,17 @@ jobs:
 
       - name: Add summary to PR Checks tab
         run: cat pr-comment.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Delete existing Snyk comment (if exists)
+        if: github.event_name == 'pull_request'
+        run: |
+          COMMENT_ID=$(gh pr view "$PR_URL" --json comments -q ".comments[] | select(.body | contains('<!-- SNYK_OSS_SUMMARY -->')) | .id")
+          if [ -n "$COMMENT_ID" ]; then
+            gh pr comment "$PR_URL" --delete "$COMMENT_ID"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
 
       - name: Post comment to PR
         if: github.event_name == 'pull_request'

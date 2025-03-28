@@ -1,0 +1,59 @@
+name: Snyk OSS Summary by Manifest
+
+on:
+  pull_request:
+  push:
+
+env:
+  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+jobs:
+  snyk-oss-summary:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Snyk CLI
+        uses: snyk/actions/setup@master
+
+      - name: Run Snyk OSS scan
+        run: snyk test --all-projects --json > snyk-oss-results.json || true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+      - name: Generate summary by manifest
+        run: |
+          echo "## 🔍 Snyk OSS Vulnerabilities by Manifest" >> $GITHUB_STEP_SUMMARY
+          node <<'EOF' >> $GITHUB_STEP_SUMMARY
+          const fs = require('fs');
+
+          const data = JSON.parse(fs.readFileSync('snyk-oss-results.json', 'utf8'));
+          const severityRank = s => ({critical:4, high:3, medium:2, low:1}[s] || 0);
+          const manifestGroups = {};
+
+          for (const project of data.projects || []) {
+            const file = project.targetFile || 'unknown';
+            for (const vuln of project.vulnerabilities || []) {
+              manifestGroups[file] = manifestGroups[file] || [];
+              manifestGroups[file].push(vuln);
+            }
+          }
+
+          for (const file in manifestGroups) {
+            const vulns = manifestGroups[file];
+            const top = vulns
+              .sort((a, b) => severityRank(b.severity) - severityRank(a.severity))
+              .slice(0, 5); // Top 5 per manifest
+
+            console.log(`### 📄 ${file}`);
+            for (const v of top) {
+              console.log(`- **${v.severity.toUpperCase()}**: ${v.packageName} – ${v.title}`);
+            }
+            console.log('');
+          }
+          EOF

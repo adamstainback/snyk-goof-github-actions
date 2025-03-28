@@ -67,10 +67,14 @@ jobs:
               if (v.severity === 'high') totalHigh++;
             }
 
-            const totalIssues = Array.from(vulnMap.values()).reduce((sum, v) => sum + v.count, 0);
+            const totalUniquePackages = vulnMap.size;
+            const totalOccurrences = totalCritical + totalHigh;
 
             output += `### 📦 ${file}  \n`;
-            output += `🔴 ${totalCritical} critical vulnerabilities and 🟠 ${totalHigh} high vulnerabilities across ${vulnMap.size} unique packages (total ${totalIssues} occurrences).\n\n`;
+            output += `🔴 ${totalCritical} critical vulnerability occurrences across ${[...vulnMap.values()].filter(v => v.severity === 'critical').length} unique packages\n`;
+            output += `🟠 ${totalHigh} high vulnerability occurrences across ${[...vulnMap.values()].filter(v => v.severity === 'high').length} unique packages\n`;
+            output += `**${totalUniquePackages} total affected packages**\n\n`;
+
             output += `| Severity | Package | Occurrences | Title | Fix Available | Advisor |\n`;
             output += `|----------|---------|-------------|-------|----------------|---------|\n`;
 

@@ -57,11 +57,10 @@ jobs:
 
             for (const v of vulns) {
               const key = `${v.packageName}@${v.version}`;
-              const count = packageVulnMap.get(key)?.count || 0;
-              packageVulnMap.set(key, {
-                ...v,
-                count: count + 1,
-              });
+              const existing = packageVulnMap.get(key) || { count: 0, vuln: v, vulnTitles: new Set() };
+              existing.count++;
+              existing.vulnTitles.add(v.title);
+              packageVulnMap.set(key, existing);
 
               if (v.severity === 'critical') criticalCount++;
               if (v.severity === 'high') highCount++;
@@ -72,13 +71,14 @@ jobs:
             output += `| Severity | Package | Vulns | Title | Fix Available | Advisor |\n`;
             output += `|----------|---------|--------|-------|----------------|---------|\n`;
 
-            for (const [key, v] of packageVulnMap.entries()) {
-              const icon = severityIcons[v.severity] || '';
-              const snykUrl = v.id ? `https://security.snyk.io/vuln/${v.id}` : '';
-              const pkgUrl = `https://www.npmjs.com/package/${v.packageName}/v/${v.version}`;
-              const advisorUrl = `https://snyk.io/advisor/npm-package/${v.packageName}`;
-              const fix = v.fixedIn?.[0] || 'N/A';
-              output += `| ${icon} ${v.severity.toUpperCase()} | [${v.packageName}@${v.version}](${pkgUrl}) | ${v.count} | [${v.title}](${snykUrl}) | ${fix} | [View](${advisorUrl}) |\n`;
+            for (const [key, { vuln, count, vulnTitles }] of packageVulnMap.entries()) {
+              const icon = severityIcons[vuln.severity] || '';
+              const snykUrl = vuln.id ? `https://security.snyk.io/vuln/${vuln.id}` : '';
+              const pkgUrl = `https://www.npmjs.com/package/${vuln.packageName}/v/${vuln.version}`;
+              const advisorUrl = `https://security.snyk.io/package/npm/${vuln.packageName}/${vuln.version}`;
+              const fix = vuln.fixedIn?.[0] || 'N/A';
+              const vulnTitle = [...vulnTitles][0];
+              output += `| ${icon} ${vuln.severity.toUpperCase()} | [${vuln.packageName}@${vuln.version}](${pkgUrl}) | ${count} | [${vulnTitle}](${snykUrl}) | ${fix} | [View](${advisorUrl}) |\n`;
             }
             output += '\n';
           }

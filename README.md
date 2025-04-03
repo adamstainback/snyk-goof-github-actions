@@ -1,103 +1,50 @@
-GitHub Actions Workflows
-This repository contains several GitHub Actions workflows located in the .github/workflows directory. Each workflow is designed to perform Snyk Open Source (OSS) vulnerability scanning for different project types and post a summary as a pull request comment.
+# GitHub Workflows: Snyk Goof Actions
 
-Workflows Overview
-snyk-oss-summary-generic.yml
+This repository demonstrates usage of custom GitHub Actions to integrate Snyk scanning into your CI/CD process.
 
-Purpose: Performs a Snyk OSS scan on a generic project and comments the results on the pull request.​
+## 🧪 Available Workflows
 
-Triggers: Runs on pull requests.​
+### 🔹 `snyk-oss-summary-maven.yml`
+Scans all Maven modules using `snyk test --all-projects`, summarizes `high` and `critical` vulnerabilities, and adds a comment to the Pull Request.
 
-Key Steps:
+- **Triggers:** `pull_request`
+- **Tools:** Java 8, Maven, Snyk CLI
+- **Outputs:** Vulnerability summary in PR checks + comment
 
-Checks out the code.
+### 🔹 `snyk-oss-summary-npm.yml`
+Performs a `snyk test` for JavaScript/Node projects with `npm`, and posts a markdown-formatted report in the PR.
 
-Installs the Snyk CLI.
+- **Triggers:** `pull_request`
+- **Tools:** Node.js, npm, Snyk CLI
+- **Outputs:** Vulnerability breakdown by severity in PR
 
-Runs snyk test with the --all-projects flag.
+### 🔹 `snyk-oss-summary-pip.yml`
+Targets Python projects. Scans all Pip/requirements.txt projects, generates a table of `critical`/`high` issues, and posts results in the PR.
 
-Generates a summary of the vulnerabilities.
+- **Triggers:** `pull_request`
+- **Tools:** Python, pip, Snyk CLI
+- **Outputs:** PR vulnerability summary by manifest
 
-Adds the summary as a comment to the pull request.
+### 🔹 `snyk-oss-summary-generic.yml`
+Generic scanner for all ecosystems supported by Snyk. It uses `--all-projects` and parses the results generically.
 
-snyk-oss-summary-maven.yml
+- **Triggers:** `pull_request`
+- **Tools:** Flexible; adjusts to project type
+- **Outputs:** Manifest-level vulnerability summary in PR comment and Checks tab
 
-Purpose: Conducts a Snyk OSS scan specifically for Maven projects and comments the results on the pull request.​
+---
 
-Triggers: Runs on pull requests.​
+## 🔐 Requirements
 
-Key Steps:
+- A repository secret called `SNYK_TOKEN` must be defined in GitHub for auth.
+- Optional: `GITHUB_TOKEN` is used to post PR comments automatically.
 
-Checks out the code.
+## 📌 Notes
 
-Sets up Java 8 using Temurin distribution.
+- All workflows include a markdown-formatted vulnerability table.
+- Only `high` and `critical` vulnerabilities are shown to avoid noise.
+- Advisor links and CVSS scores are embedded for quick review.
 
-Builds the Maven project with tests skipped.
+---
 
-Installs the Snyk CLI.
-
-Runs snyk test with the --all-projects flag.
-
-Generates a summary of the vulnerabilities.
-
-Adds the summary as a comment to the pull request.
-
-snyk-oss-summary-npm.yml
-
-Purpose: Performs a Snyk OSS scan for Node.js projects using npm and comments the results on the pull request.​
-
-Triggers: Runs on pull requests.​
-
-Key Steps:
-
-Checks out the code.
-
-Sets up Node.js version 14.
-
-Installs project dependencies using npm.
-
-Installs the Snyk CLI.
-
-Runs snyk test with the --all-projects flag.
-
-Generates a summary of the vulnerabilities.
-
-Adds the summary as a comment to the pull request.
-
-snyk-oss-summary-pip.yml
-
-Purpose: Executes a Snyk OSS scan for Python projects using pip and comments the results on the pull request.​
-
-Triggers: Runs on pull requests.​
-
-Key Steps:
-
-Checks out the code.
-
-Sets up Python version 3.8.
-
-Installs project dependencies using pip.
-
-Installs the Snyk CLI.
-
-Runs snyk test with the --all-projects flag.
-
-Generates a summary of the vulnerabilities.
-
-Adds the summary as a comment to the pull request.
-
-Common Features
-Snyk CLI Installation: Each workflow installs the Snyk CLI to perform vulnerability scanning.​
-
-Environment Variables: The SNYK_TOKEN is set using GitHub Secrets to authenticate with Snyk.​
-
-Pull Request Comments: After scanning, a summary of the vulnerabilities is generated and added as a comment to the pull request.​
-
-Setup Instructions
-To enable these workflows in your repository:
-
-Set Up Snyk Token: Add your Snyk API token as a secret named SNYK_TOKEN in your repository's settings.​
-
-Ensure Compatibility: Make sure your project structure matches the expected setup for each workflow (e.g., presence of pom.xml for Maven projects, package.json for npm projects, etc.).​
-
-Customize Workflows: If necessary, modify the workflows to fit your project's specific requirements, such as adjusting the Node.js or Python versions.
+> Built for demonstration and educational purposes using [Snyk](https://snyk.io).

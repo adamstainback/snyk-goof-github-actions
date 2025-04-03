@@ -27,7 +27,7 @@ Each workflow:
 Create a repository secret named `SNYK_TOKEN`:
 - Go to `Settings > Secrets and variables > Actions`
 - Add a new secret with the name `SNYK_TOKEN`
-
+.
 ---
 
 ### 2. Environment Setup per Language

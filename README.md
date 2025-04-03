@@ -79,7 +79,7 @@ Scans Python dependencies via `requirements.txt`.
 ### ✅ `snyk-oss-summary-generic.yml`
 Example template with no build steps
 
-- Useful for building off of from scratch
+- Useful for building a workflow from scratch
 - Won't work without additional build steps
 - Useful for PR comment logic parsing
 

@@ -14,14 +14,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install dependencies
-        run: npm install
-
       - name: Install Snyk CLI
         uses: snyk/actions/setup@master
 
       - name: Run Snyk OSS scan
-        run: snyk test --all-projects --json > snyk-oss-results.json || true
+        run: |
+          snyk test --all-projects --json | tee snyk-oss-results.json
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 

@@ -116,7 +116,7 @@ jobs:
 
               const pkgUrl = `${pkgBaseUrl(vuln.packageName)}`;
               const advisorUrl = advisorBaseUrl(vuln.packageName, vuln.version);
-              const fix = vuln.fixedIn?.[0] || 'N/A';
+              const fix = vuln.fixedIn?.length ? vuln.fixedIn.join(', ') : 'N/A';
               const title = [...titles][0];
 
               let score = vuln.cvssScore || (vuln.cvssDetails?.[0]?.cvssV3BaseScore || 'N/A');

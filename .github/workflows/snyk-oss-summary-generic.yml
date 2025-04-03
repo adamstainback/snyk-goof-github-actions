@@ -1,4 +1,4 @@
-name: Snyk OSS Summary with PR Comment
+name: (Generic) Snyk OSS Summary with PR Comment
 
 on:
   pull_request:

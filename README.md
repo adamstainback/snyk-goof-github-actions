@@ -14,6 +14,7 @@ Each workflow:
 - Writes the same summary to the **GitHub PR Checks tab**
 
 > ⚠️ All workflows fetch the **latest Snyk CLI version** using [`snyk/actions/setup@master`](https://github.com/snyk/actions).
+> ⚠️ Snyk advisor links are only supported for npm, PyPi, Go, and Docker (https://github.com/snyk/actions).
 
 ---
 

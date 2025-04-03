@@ -8,6 +8,8 @@ This repo demonstrates how to integrate **Snyk Open Source (OSS) vulnerability s
 - Generic Template (no build steps added)
 
 Each workflow:
+- Only runs on pull requests
+- Scans whole project provided it's built correctly
 - Scans dependencies using the Snyk CLI
 - Parses the results to extract only **critical** and **high** severity issues
 - Posts a formatted markdown comment to the **pull request**
@@ -40,41 +42,45 @@ Create a repository secret named `SNYK_TOKEN`:
 
 ## 📂 Workflows in This Repo
 
-### ✅ `maven-multi-module-pr-comment.yml`
+### ✅ `snyk-oss-summary-maven.yml`
+Link to relevant build: (https://github.com/adamstainback/Java-Goof/actions/runs/14238124081)
+
 Scans all Maven modules using Snyk’s `--all-projects` and generates a PR comment summary.
 
 - Uses `Temurin 8` to support legacy Java
 - Builds all modules but skips tests
 - Scans all `pom.xml` files
 - Summarizes vulnerabilities grouped by manifest file
-- Includes direct links to Snyk Advisor + Maven Central
-
----
-
-### ✅ `npm-oss-pr-comment.yml`
-Scans `package.json` dependencies for a Node.js project and posts a detailed markdown summary.
-
-- Installs with `npm ci`
-- Targets only high and critical vulns
 - Includes CVSS, dependency type, fix info, and links
 
 ---
 
-### ✅ `pip-oss-pr-comment.yml`
+### ✅ `snyk-oss-summary-npm.yml`
+Scans `package.json` dependencies for a Node.js project and posts a detailed markdown summary.
+
+- Installs with `npm ci`
+- Targets only high and critical vulns
+- Summarizes vulnerabilities grouped by manifest file
+- Includes CVSS, dependency type, fix info, and links
+
+---
+
+### ✅ `snyk-oss-summary-pip.yml`
 Scans Python dependencies via `requirements.txt`.
 
 - Uses Python 3.x
 - Installs dependencies via `pip install -r requirements.txt`
-- Extracts critical/high issues with full context
+- Summarizes vulnerabilities grouped by manifest file
+- Includes CVSS, dependency type, fix info, and links
 
 ---
 
-### ✅ `snyk-generic.yml`
-Runs a top-level Snyk scan against the entire repo (no language-specific config required).
+### ✅ `snyk-oss-summary-generic.yml`
+Example template with no build steps
 
-- Useful for mono-repos or fallback scanning
-- Doesn't require a build
-- Posts vulnerabilities from all detectable ecosystems
+- Useful for building off of from scratch
+- Won't work without additional build steps
+- Useful for PR comment logic parsing
 
 ---
 
@@ -94,3 +100,7 @@ Example snippet:
 | Severity | Package                | Dependency Type | CVSS | Occurrences | Title                              | Fix Available | Advisor |
 |----------|------------------------|------------------|------|-------------|------------------------------------|---------------|---------|
 | 🔴 CRITICAL | log4j-core@2.14.1     | Transitive       | 9.8  | 3           | [RCE in log4j](https://snyk.io/...) | 2.17.1        | [View](https://security.snyk.io/...) |
+
+---
+
+> Built for demonstration and educational purposes using [Snyk](https://snyk.io).

@@ -1,92 +1,105 @@
-# Goof - Snyk's vulnerable demo app
-[![Known Vulnerabilities](https://snyk.io/test/github/snyk/goof/badge.svg?style=flat-square)](https://snyk.io/test/github/snyk/goof)
+## <img src="https://cdn.brandfetch.io/id8lDQ6AMj/idG0kOimA5.svg?c=1dxbfHSJFAPEGdCLU4o5B" alt="Snyk" height="44" /> Snyk OSS Vulnerabilities by Manifest
 
-A vulnerable Node.js demo application, based on the [Dreamers Lab tutorial](http://dreamerslab.com/blog/en/write-a-todo-list-with-express-and-mongodb/).
+This repo demonstrates how to integrate **Snyk Open Source (OSS) vulnerability scanning** into GitHub Actions for a multi-language, multi-module environment. It includes workflows for:
 
-## Features
+- Java (Maven multi-module)
+- Node.js (NPM)
+- Python (Pip)
+- Generic Template (no build steps added)
 
-This vulnerable app includes the following capabilities to experiment with:
-* [Exploitable packages](#exploiting-the-vulnerabilities) with known vulnerabilities
-* [Docker Image Scanning](#docker-image-scanning) for base images with known vulnerabilities in system libraries
-* [Runtime alerts](#runtime-alerts) for detecting an invocation of vulnerable functions in open source dependencies
+Each workflow:
+- Only runs on pull requests
+- Scans whole project provided it's built correctly
+- Scans dependencies using the Snyk CLI
+- Parses the results to extract only **critical** and **high** severity issues
+- Posts a formatted markdown comment to the **pull request**
+- Writes the same summary to the **GitHub PR Checks tab**
 
-## Running
-```bash
-mongod &
+> ⚠️ All workflows fetch the **latest Snyk CLI version** using [`snyk/actions/setup@master`](https://github.com/snyk/actions).
+> ⚠️ Snyk advisor links are only supported for npm, PyPi, Go, and Docker (https://github.com/snyk/actions).
 
-git clone https://github.com/Snyk/snyk-demo-todo
-npm install
-npm start
-```
-This will run Goof locally, using a local mongo on the default port and listening on port 3001 (http://localhost:3001)
+---
 
-## Running with docker-compose
-```bash
-docker-compose up --build
-docker-compose down
-```
+## 🔧 Setup Requirements
 
-### Heroku usage
-Goof requires attaching a MongoLab service to be deployed as a Heroku app. 
-That sets up the MONGOLAB_URI env var so everything after should just work. 
+### 1. Add Snyk API Token
+Create a repository secret named `SNYK_TOKEN`:
+- Go to `Settings > Secrets and variables > Actions`
+- Add a new secret with the name `SNYK_TOKEN`
 
-### CloudFoundry usage
-Goof requires attaching a MongoLab service and naming it "goof-mongo" to be deployed on CloudFoundry. 
-The code explicitly looks for credentials to that service. 
+---
 
-### Cleanup
-To bulk delete the current list of TODO items from the DB run:
-```bash
-npm run cleanup
-```
-a
-## Exploiting the vulnerabilities
+### 2. Environment Setup per Language
 
-This app uses npm dependencies holding known vulnerabilities.
+| Language | Build Tool / Command                    | Required Setup                        |
+|----------|------------------------------------------|----------------------------------------|
+| Java     | `mvn clean install -DskipTests`          | `actions/setup-java@v3` with Java 8+  |
+| Node.js  | `npm install`                            | `actions/setup-node@v3` with Node 16+ |
+| Python   | `pip install -r requirements.txt`        | `actions/setup-python@v4` with Python 3.x |
+| Generic  | None                                     | None (just `snyk test` on repo root)  |
 
-Here are the exploitable vulnerable packages:
-- [Mongoose - Buffer Memory Exposure](https://snyk.io/vuln/npm:mongoose:20160116)
-- [st - Directory Traversal](https://snyk.io/vuln/npm:st:20140206)
-- [ms - ReDoS](https://snyk.io/vuln/npm:ms:20151024)
-- [marked - XSS](https://snyk.io/vuln/npm:marked:20150520)
+---
 
-The `exploits/` directory includes a series of steps to demonstrate each one.
+## 📂 Workflows in This Repo
 
-## Docker Image Scanning
+### ✅ `snyk-oss-summary-maven.yml`
+Link to relevant build: (https://github.com/adamstainback/Java-Goof/actions/runs/14238124081)
 
-The `Dockerfile` makes use of a base image (`node:6-stretch`) that is known to have system libraries with vulnerabilities.
+Scans all Maven modules using Snyk’s `--all-projects` and generates a PR comment summary.
 
-To scan the image for vulnerabilities, run:
-```bash
-snyk test --docker node:6-stretch --file=Dockerfile
-```
+- Uses `Temurin 8` to support legacy Java
+- Builds all modules but skips tests
+- Scans all `pom.xml` files
+- Summarizes vulnerabilities grouped by manifest file
+- Includes CVSS, dependency type, fix info, and links
 
-To monitor this image and receive alerts with Snyk:
-```bash
-snyk monitor --docker node:6-stretch
-```
+---
 
-## Runtime Alerts
+### ✅ `snyk-oss-summary-npm.yml`
+Scans `package.json` dependencies for a Node.js project and posts a detailed markdown summary.
 
-Snyk provides the ability to monitor application runtime behavior and detect an invocation of a function is known to be vulnerable and used within open source dependencies that the application makes use of.
+- Installs with `npm ci`
+- Targets only high and critical vulns
+- Summarizes vulnerabilities grouped by manifest file
+- Includes CVSS, dependency type, fix info, and links
 
-The agent is installed and initialized in [app.js](./app.js#L5).
+---
 
-For the agent to report back to your snyk account on the vulnerabilities it detected it needs to know which project on Snyk to associate with the monitoring. Due to that, we need to provide it with the project id through an environment variable `SNYK_PROJECT_ID`
+### ✅ `snyk-oss-summary-pip.yml`
+Scans Python dependencies via `requirements.txt`.
 
-To run the Node.js app with runtime monitoring:
-```bash
-SNYK_PROJECT_ID=<PROJECT_ID> npm start
-```
+- Uses Python 3.x
+- Installs dependencies via `pip install -r requirements.txt`
+- Summarizes vulnerabilities grouped by manifest file
+- Includes CVSS, dependency type, fix info, and links
 
-** The app will continue to work normally even if not provided a project id
+---
 
-## Fixing the issues
-To find these flaws in this application (and in your own apps), run:
-```
-npm install -g snyk
-snyk wizard
-```
+### ✅ `snyk-oss-summary-generic.yml`
+Example template with no build steps
 
-In this application, the default `snyk wizard` answers will fix all the issues.
-When the wizard is done, restart the application and run the exploits again to confirm they are fixed.
+- Useful for building off of from scratch
+- Won't work without additional build steps
+- Useful for PR comment logic parsing
+
+---
+
+## 💬 PR Comment Format
+
+All workflows include a custom embedded Node.js script that:
+
+- Summarizes findings into a markdown table
+- Uses severity icons (🔴 critical, 🟠 high)
+- Displays CVSS scores, fix availability, advisory links
+- Differentiates between **Direct** and **Transitive** dependencies
+- Automatically updates an existing PR comment using GitHub CLI
+
+Example snippet:
+
+```markdown
+| Severity | Package                | Dependency Type | CVSS | Occurrences | Title                              | Fix Available | Advisor |
+|----------|------------------------|------------------|------|-------------|------------------------------------|---------------|---------|
+| 🔴 CRITICAL | log4j-core@2.14.1     | Transitive       | 9.8  | 3           | [RCE in log4j](https://snyk.io/...) | 2.17.1        | [View](https://security.snyk.io/...) |
+
+---
+> Built for demonstration and educational purposes using [Snyk](https://snyk.io).

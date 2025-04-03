@@ -102,5 +102,4 @@ Example snippet:
 | 🔴 CRITICAL | log4j-core@2.14.1     | Transitive       | 9.8  | 3           | [RCE in log4j](https://snyk.io/...) | 2.17.1        | [View](https://security.snyk.io/...) |
 
 ---
-
 > Built for demonstration and educational purposes using [Snyk](https://snyk.io).

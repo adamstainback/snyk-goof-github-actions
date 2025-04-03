@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout c
         uses: actions/checkout@v3
 
       - name: Set up Python
@@ -101,7 +101,7 @@ jobs:
               const snykUrl = vuln.id ? `https://security.snyk.io/vuln/${vuln.id}` : '';
               const pkgUrl = `https://pypi.org/project/${vuln.packageName}/${vuln.version}/`;
               const advisorUrl = `https://security.snyk.io/package/pip/${vuln.packageName}/${vuln.version}`;
-              const fix = vuln.fixedIn?.[0] || 'N/A';
+              const fix = vuln.fixedIn?.length ? vuln.fixedIn.join(', ') : 'N/A';
               const title = [...titles][0];
               let score = vuln.cvssScore || (vuln.cvssDetails?.[0]?.cvssV3BaseScore || 'N/A');
               if (typeof score === 'number') score = score.toFixed(1);

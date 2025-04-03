@@ -1,50 +1,95 @@
-# GitHub Workflows: Snyk Goof Actions
+# 🔐 Snyk Vulnerability Scanning GitHub Actions – Multi-Language Goof Repo
 
-This repository demonstrates usage of custom GitHub Actions to integrate Snyk scanning into your CI/CD process.
+This repo demonstrates how to integrate **Snyk Open Source (OSS) vulnerability scanning** into GitHub Actions for a multi-language, multi-module environment. It includes workflows for:
 
-## 🧪 Available Workflows
+- Java (Maven multi-module)
+- Node.js (NPM)
+- Python (Pip)
+- Generic Template (no build steps added)
 
-### 🔹 `snyk-oss-summary-maven.yml`
-Scans all Maven modules using `snyk test --all-projects`, summarizes `high` and `critical` vulnerabilities, and adds a comment to the Pull Request.
+Each workflow:
+- Scans dependencies using the Snyk CLI
+- Parses the results to extract only **critical** and **high** severity issues
+- Posts a formatted markdown comment to the **pull request**
+- Writes the same summary to the **GitHub PR Checks tab**
 
-- **Triggers:** `pull_request`
-- **Tools:** Java 8, Maven, Snyk CLI
-- **Outputs:** Vulnerability summary in PR checks + comment
-
-### 🔹 `snyk-oss-summary-npm.yml`
-Performs a `snyk test` for JavaScript/Node projects with `npm`, and posts a markdown-formatted report in the PR.
-
-- **Triggers:** `pull_request`
-- **Tools:** Node.js, npm, Snyk CLI
-- **Outputs:** Vulnerability breakdown by severity in PR
-
-### 🔹 `snyk-oss-summary-pip.yml`
-Targets Python projects. Scans all Pip/requirements.txt projects, generates a table of `critical`/`high` issues, and posts results in the PR.
-
-- **Triggers:** `pull_request`
-- **Tools:** Python, pip, Snyk CLI
-- **Outputs:** PR vulnerability summary by manifest
-
-### 🔹 `snyk-oss-summary-generic.yml`
-Generic scanner for all ecosystems supported by Snyk. It uses `--all-projects` and parses the results generically.
-
-- **Triggers:** `pull_request`
-- **Tools:** Flexible; adjusts to project type
-- **Outputs:** Manifest-level vulnerability summary in PR comment and Checks tab
+> ⚠️ All workflows fetch the **latest Snyk CLI version** using [`snyk/actions/setup@master`](https://github.com/snyk/actions).
 
 ---
 
-## 🔐 Requirements
+## 🔧 Setup Requirements
 
-- A repository secret called `SNYK_TOKEN` must be defined in GitHub for auth.
-- Optional: `GITHUB_TOKEN` is used to post PR comments automatically.
-
-## 📌 Notes
-
-- All workflows include a markdown-formatted vulnerability table.
-- Only `high` and `critical` vulnerabilities are shown to avoid noise.
-- Advisor links and CVSS scores are embedded for quick review.
+### 1. Add Snyk API Token
+Create a repository secret named `SNYK_TOKEN`:
+- Go to `Settings > Secrets and variables > Actions`
+- Add a new secret with the name `SNYK_TOKEN`
 
 ---
 
-> Built for demonstration and educational purposes using [Snyk](https://snyk.io).
+### 2. Environment Setup per Language
+
+| Language | Build Tool / Command                    | Required Setup                        |
+|----------|------------------------------------------|----------------------------------------|
+| Java     | `mvn clean install -DskipTests`          | `actions/setup-java@v3` with Java 8+  |
+| Node.js  | `npm install`                            | `actions/setup-node@v3` with Node 16+ |
+| Python   | `pip install -r requirements.txt`        | `actions/setup-python@v4` with Python 3.x |
+| Generic  | None                                     | None (just `snyk test` on repo root)  |
+
+---
+
+## 📂 Workflows in This Repo
+
+### ✅ `maven-multi-module-pr-comment.yml`
+Scans all Maven modules using Snyk’s `--all-projects` and generates a PR comment summary.
+
+- Uses `Temurin 8` to support legacy Java
+- Builds all modules but skips tests
+- Scans all `pom.xml` files
+- Summarizes vulnerabilities grouped by manifest file
+- Includes direct links to Snyk Advisor + Maven Central
+
+---
+
+### ✅ `npm-oss-pr-comment.yml`
+Scans `package.json` dependencies for a Node.js project and posts a detailed markdown summary.
+
+- Installs with `npm ci`
+- Targets only high and critical vulns
+- Includes CVSS, dependency type, fix info, and links
+
+---
+
+### ✅ `pip-oss-pr-comment.yml`
+Scans Python dependencies via `requirements.txt`.
+
+- Uses Python 3.x
+- Installs dependencies via `pip install -r requirements.txt`
+- Extracts critical/high issues with full context
+
+---
+
+### ✅ `snyk-generic.yml`
+Runs a top-level Snyk scan against the entire repo (no language-specific config required).
+
+- Useful for mono-repos or fallback scanning
+- Doesn't require a build
+- Posts vulnerabilities from all detectable ecosystems
+
+---
+
+## 💬 PR Comment Format
+
+All workflows include a custom embedded Node.js script that:
+
+- Summarizes findings into a markdown table
+- Uses severity icons (🔴 critical, 🟠 high)
+- Displays CVSS scores, fix availability, advisory links
+- Differentiates between **Direct** and **Transitive** dependencies
+- Automatically updates an existing PR comment using GitHub CLI
+
+Example snippet:
+
+```markdown
+| Severity | Package                | Dependency Type | CVSS | Occurrences | Title                              | Fix Available | Advisor |
+|----------|------------------------|------------------|------|-------------|------------------------------------|---------------|---------|
+| 🔴 CRITICAL | log4j-core@2.14.1     | Transitive       | 9.8  | 3           | [RCE in log4j](https://snyk.io/...) | 2.17.1        | [View](https://security.snyk.io/...) |

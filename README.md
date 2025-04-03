@@ -1,92 +1,103 @@
-# Goof - Snyk's vulnerable demo app
-[![Known Vulnerabilities](https://snyk.io/test/github/snyk/goof/badge.svg?style=flat-square)](https://snyk.io/test/github/snyk/goof)
+GitHub Actions Workflows
+This repository contains several GitHub Actions workflows located in the .github/workflows directory. Each workflow is designed to perform Snyk Open Source (OSS) vulnerability scanning for different project types and post a summary as a pull request comment.
 
-A vulnerable Node.js demo application, based on the [Dreamers Lab tutorial](http://dreamerslab.com/blog/en/write-a-todo-list-with-express-and-mongodb/).
+Workflows Overview
+snyk-oss-summary-generic.yml
 
-## Features
+Purpose: Performs a Snyk OSS scan on a generic project and comments the results on the pull request.​
 
-This vulnerable app includes the following capabilities to experiment with:
-* [Exploitable packages](#exploiting-the-vulnerabilities) with known vulnerabilities
-* [Docker Image Scanning](#docker-image-scanning) for base images with known vulnerabilities in system libraries
-* [Runtime alerts](#runtime-alerts) for detecting an invocation of vulnerable functions in open source dependencies
+Triggers: Runs on pull requests.​
 
-## Running
-```bash
-mongod &
+Key Steps:
 
-git clone https://github.com/Snyk/snyk-demo-todo
-npm install
-npm start
-```
-This will run Goof locally, using a local mongo on the default port and listening on port 3001 (http://localhost:3001)
+Checks out the code.
 
-## Running with docker-compose
-```bash
-docker-compose up --build
-docker-compose down
-```
+Installs the Snyk CLI.
 
-### Heroku usage
-Goof requires attaching a MongoLab service to be deployed as a Heroku app. 
-That sets up the MONGOLAB_URI env var so everything after should just work. 
+Runs snyk test with the --all-projects flag.
 
-### CloudFoundry usage
-Goof requires attaching a MongoLab service and naming it "goof-mongo" to be deployed on CloudFoundry. 
-The code explicitly looks for credentials to that service. 
+Generates a summary of the vulnerabilities.
 
-### Cleanup
-To bulk delete the current list of TODO items from the DB run:
-```bash
-npm run cleanup
-```
-a
-## Exploiting the vulnerabilities
+Adds the summary as a comment to the pull request.
 
-This app uses npm dependencies holding known vulnerabilities.
+snyk-oss-summary-maven.yml
 
-Here are the exploitable vulnerable packages:
-- [Mongoose - Buffer Memory Exposure](https://snyk.io/vuln/npm:mongoose:20160116)
-- [st - Directory Traversal](https://snyk.io/vuln/npm:st:20140206)
-- [ms - ReDoS](https://snyk.io/vuln/npm:ms:20151024)
-- [marked - XSS](https://snyk.io/vuln/npm:marked:20150520)
+Purpose: Conducts a Snyk OSS scan specifically for Maven projects and comments the results on the pull request.​
 
-The `exploits/` directory includes a series of steps to demonstrate each one.
+Triggers: Runs on pull requests.​
 
-## Docker Image Scanning
+Key Steps:
 
-The `Dockerfile` makes use of a base image (`node:6-stretch`) that is known to have system libraries with vulnerabilities.
+Checks out the code.
 
-To scan the image for vulnerabilities, run:
-```bash
-snyk test --docker node:6-stretch --file=Dockerfile
-```
+Sets up Java 8 using Temurin distribution.
 
-To monitor this image and receive alerts with Snyk:
-```bash
-snyk monitor --docker node:6-stretch
-```
+Builds the Maven project with tests skipped.
 
-## Runtime Alerts
+Installs the Snyk CLI.
 
-Snyk provides the ability to monitor application runtime behavior and detect an invocation of a function is known to be vulnerable and used within open source dependencies that the application makes use of.
+Runs snyk test with the --all-projects flag.
 
-The agent is installed and initialized in [app.js](./app.js#L5).
+Generates a summary of the vulnerabilities.
 
-For the agent to report back to your snyk account on the vulnerabilities it detected it needs to know which project on Snyk to associate with the monitoring. Due to that, we need to provide it with the project id through an environment variable `SNYK_PROJECT_ID`
+Adds the summary as a comment to the pull request.
 
-To run the Node.js app with runtime monitoring:
-```bash
-SNYK_PROJECT_ID=<PROJECT_ID> npm start
-```
+snyk-oss-summary-npm.yml
 
-** The app will continue to work normally even if not provided a project id
+Purpose: Performs a Snyk OSS scan for Node.js projects using npm and comments the results on the pull request.​
 
-## Fixing the issues
-To find these flaws in this application (and in your own apps), run:
-```
-npm install -g snyk
-snyk wizard
-```
+Triggers: Runs on pull requests.​
 
-In this application, the default `snyk wizard` answers will fix all the issues.
-When the wizard is done, restart the application and run the exploits again to confirm they are fixed.
+Key Steps:
+
+Checks out the code.
+
+Sets up Node.js version 14.
+
+Installs project dependencies using npm.
+
+Installs the Snyk CLI.
+
+Runs snyk test with the --all-projects flag.
+
+Generates a summary of the vulnerabilities.
+
+Adds the summary as a comment to the pull request.
+
+snyk-oss-summary-pip.yml
+
+Purpose: Executes a Snyk OSS scan for Python projects using pip and comments the results on the pull request.​
+
+Triggers: Runs on pull requests.​
+
+Key Steps:
+
+Checks out the code.
+
+Sets up Python version 3.8.
+
+Installs project dependencies using pip.
+
+Installs the Snyk CLI.
+
+Runs snyk test with the --all-projects flag.
+
+Generates a summary of the vulnerabilities.
+
+Adds the summary as a comment to the pull request.
+
+Common Features
+Snyk CLI Installation: Each workflow installs the Snyk CLI to perform vulnerability scanning.​
+
+Environment Variables: The SNYK_TOKEN is set using GitHub Secrets to authenticate with Snyk.​
+
+Pull Request Comments: After scanning, a summary of the vulnerabilities is generated and added as a comment to the pull request.​
+
+Setup Instructions
+To enable these workflows in your repository:
+
+Set Up Snyk Token: Add your Snyk API token as a secret named SNYK_TOKEN in your repository's settings.​
+
+Ensure Compatibility: Make sure your project structure matches the expected setup for each workflow (e.g., presence of pom.xml for Maven projects, package.json for npm projects, etc.).​
+
+Customize Workflows: If necessary, modify the workflows to fit your project's specific requirements, such as adjusting the Node.js or Python versions.

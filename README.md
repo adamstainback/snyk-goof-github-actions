@@ -13,7 +13,7 @@ Each workflow:
 - Scans dependencies using the Snyk CLI
 - Parses the results to extract only **critical** and **high** severity issues
 - Posts a formatted markdown comment to the **pull request**
-- Writes the same summary to the **GitHub PR Checks tab**
+- Writes the same summary to the **GitHub PR Checks tab****
 
 > ⚠️ All workflows fetch the **latest Snyk CLI version** using [`snyk/actions/setup@master`](https://github.com/snyk/actions).
 
